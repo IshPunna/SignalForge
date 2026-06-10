@@ -1,6 +1,9 @@
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+
 public class Main {
 
-    public static void main(String args[]) {
+    public static void main(String args[]) throws FileNotFoundException {
 
         String ticker = "AAPL";
 
@@ -30,5 +33,13 @@ public class Main {
         );
 
         System.out.println(report);
+
+        StockCsvReader.readFile("data/sample_stock_data.csv");
+
+        ArrayList<PriceBar> bars = StockCsvReader.readFile("data/sample_stock_data.csv");
+
+        for (PriceBar bar : bars) {
+            System.out.println(bar.getSummary());
+        }
     }
 }
