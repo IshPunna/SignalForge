@@ -1,5 +1,7 @@
+
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Main {
 
@@ -7,8 +9,30 @@ public class Main {
 
         String ticker = "AAPL";
 
-        double[] price = {10, 12, 14, 16, 18};
-        long[] volume = {1000, 1200, 1300, 1500, 2000};
+        ArrayList<PriceBar> bars = StockCsvReader.readFile("data/sample_stock_data.csv");
+
+        StockData stockData = new StockData(bars);
+
+        HashMap<String, Double> latestPrices = stockData.getLatestClosePriceMap();
+
+        StockDataPrinter.printLatestClosePriceMap(latestPrices);
+
+        ArrayList<PriceBar> selectedBars = stockData.getBarsForTicker(ticker);
+
+        StockDataPrinter.printBarsForTicker(ticker, selectedBars);
+
+        if (selectedBars.size() == 0) {
+            System.out.println("No data found for ticker: " + ticker);
+            return;
+        }
+
+        double[] price = new double[selectedBars.size()];
+        long[] volume = new long[selectedBars.size()];
+
+        for (int i = 0; i < selectedBars.size(); i++) {
+            price[i] = selectedBars.get(i).getClosePrice();
+            volume[i] = selectedBars.get(i).getSharesTraded();
+        }
 
         double sma = StockMath.calculateSimpleMovingAverage(price, 3);
         double currentPrice = price[price.length - 1];
@@ -33,13 +57,5 @@ public class Main {
         );
 
         System.out.println(report);
-
-        StockCsvReader.readFile("data/sample_stock_data.csv");
-
-        ArrayList<PriceBar> bars = StockCsvReader.readFile("data/sample_stock_data.csv");
-
-        for (PriceBar bar : bars) {
-            System.out.println(bar.getSummary());
-        }
     }
 }

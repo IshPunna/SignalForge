@@ -30,6 +30,7 @@ public class StockCsvReader {
             bars.add(bar);
         }
 
+        in.close();
         return bars;
     }
 }
