@@ -1,6 +1,5 @@
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public class StockData {
 
@@ -46,13 +45,13 @@ public class StockData {
         return volumes;
     }
 
-    public HashMap<String, Double> getLatestClosePriceMap() {
-        HashMap<String, Double> latestPrices = new HashMap<>();
+    public LatestPriceIndex buildLatestPriceIndex() {
+        LatestPriceIndex index = new LatestPriceIndex();
 
         for (PriceBar bar : bars) {
-            latestPrices.put(bar.getTickerSymbol(), bar.getClosePrice());
+            index.addPrice(bar.getTickerSymbol(), bar.getClosePrice());
         }
 
-        return latestPrices;
+        return index;
     }
 }

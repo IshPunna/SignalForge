@@ -1,3 +1,4 @@
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -20,10 +21,18 @@ public class StockDataPrinter {
     }
 
     public static void printLatestClosePriceMap(HashMap<String, Double> latestPrices) {
-    System.out.println("===== LATEST CLOSE PRICE MAP =====");
+        System.out.println("===== LATEST CLOSE PRICE MAP =====");
 
-    for (String symbol : latestPrices.keySet()) {
-        System.out.println(symbol + " -> $" + latestPrices.get(symbol));
+        for (String symbol : latestPrices.keySet()) {
+            System.out.println(symbol + " -> $" + latestPrices.get(symbol));
+        }
     }
-}
+
+    public static void printLatestPriceIndex(LatestPriceIndex index) {
+        System.out.println("===== LATEST PRICE INDEX =====");
+
+        for (String ticker : index.getAllLatestPrices().keySet()) {
+            System.out.println(ticker + " -> $" + index.getLatestPrice(ticker));
+        }
+    }
 }

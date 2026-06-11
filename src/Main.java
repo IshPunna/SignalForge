@@ -1,7 +1,5 @@
-
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public class Main {
 
@@ -13,26 +11,21 @@ public class Main {
 
         StockData stockData = new StockData(bars);
 
-        HashMap<String, Double> latestPrices = stockData.getLatestClosePriceMap();
+        LatestPriceIndex latestPriceIndex = stockData.buildLatestPriceIndex();
 
-        StockDataPrinter.printLatestClosePriceMap(latestPrices);
+        StockDataPrinter.printLatestPriceIndex(latestPriceIndex);
 
         ArrayList<PriceBar> selectedBars = stockData.getBarsForTicker(ticker);
-
-        StockDataPrinter.printBarsForTicker(ticker, selectedBars);
 
         if (selectedBars.size() == 0) {
             System.out.println("No data found for ticker: " + ticker);
             return;
         }
 
-        double[] price = new double[selectedBars.size()];
-        long[] volume = new long[selectedBars.size()];
+        StockDataPrinter.printBarsForTicker(ticker, selectedBars);
 
-        for (int i = 0; i < selectedBars.size(); i++) {
-            price[i] = selectedBars.get(i).getClosePrice();
-            volume[i] = selectedBars.get(i).getSharesTraded();
-        }
+        double[] price = stockData.getClosePrices(ticker);
+        long[] volume = stockData.getVolumes(ticker);
 
         double sma = StockMath.calculateSimpleMovingAverage(price, 3);
         double currentPrice = price[price.length - 1];
