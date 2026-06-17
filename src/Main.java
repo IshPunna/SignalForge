@@ -6,7 +6,12 @@ public class Main {
 
     public static void main(String args[]) throws FileNotFoundException {
 
-        String ticker = "AAPL";
+        String[] watchlist = {"AAPL", "MSFT"};
+
+        int movingAveragePeriod = 3;
+        int rsiPeriod = 2;
+        int minimumDataPoints = 3;
+        int watchScoreThreshold = 60;
 
         ArrayList<PriceBar> bars = StockCsvReader.readFile("data/sample_stock_data.csv");
 
@@ -16,59 +21,128 @@ public class Main {
 
         StockDataPrinter.printLatestPriceIndex(latestPriceIndex);
 
-        ArrayList<PriceBar> selectedBars = stockData.getBarsForTicker(ticker);
+        System.out.println("===== SCAN SETTINGS =====");
+        System.out.println("Moving Average Period: " + movingAveragePeriod);
+        System.out.println("RSI Period: " + rsiPeriod);
+        System.out.println("Minimum Data Points: " + minimumDataPoints);
+        System.out.println("Watch Score Threshold: " + watchScoreThreshold);
+        System.out.println("=========================");
+        System.out.println();
 
-        if (selectedBars.size() == 0) {
-            System.out.println("No data found for ticker: " + ticker);
-            return;
+        ArrayList<SignalResult> results = new ArrayList<>();
+
+        for (String ticker : watchlist) {
+            ArrayList<PriceBar> selectedBars = stockData.getBarsForTicker(ticker);
+
+            if (selectedBars.size() == 0) {
+                System.out.println("No data found for ticker: " + ticker);
+                continue;
+            }
+
+            if (selectedBars.size() < minimumDataPoints) {
+                System.out.println("===== SKIPPED TICKER =====");
+                System.out.println("Ticker: " + ticker);
+                System.out.println("Reason: Needs at least " + minimumDataPoints + " data points.");
+                System.out.println("==========================");
+                System.out.println();
+                continue;
+
+            }
+
+            StockDataPrinter.printBarsForTicker(ticker, selectedBars);
+
+            double[] price = stockData.getClosePrices(ticker);
+            long[] volume = stockData.getVolumes(ticker);
+
+            double sma = IndicatorCalculator.calculateSMA(price, movingAveragePeriod);
+            double ema = IndicatorCalculator.calculateEMA(price, movingAveragePeriod);
+            double volatility = IndicatorCalculator.calculateVolatility(price);
+            double rsi = IndicatorCalculator.calculateRSI(price, rsiPeriod);
+
+            double currentPrice = price[price.length - 1];
+
+            double averageVolume = IndicatorCalculator.calculateAverageVolume(volume);
+            long currentVolume = volume[volume.length - 1];
+
+            String riskLevel = SignalIndicator.getRiskLevel(volatility);
+
+            String combinedSignal = SignalIndicator.getCombinedSignal(
+                    currentPrice,
+                    sma,
+                    currentVolume,
+                    averageVolume
+            );
+
+            int score = SignalIndicator.getSignalScore(
+                    currentPrice,
+                    sma,
+                    ema,
+                    rsi,
+                    currentVolume,
+                    averageVolume,
+                    riskLevel
+            );
+
+            String reasons = SignalIndicator.getSignalReasons(
+                    currentPrice,
+                    sma,
+                    ema,
+                    rsi,
+                    currentVolume,
+                    averageVolume,
+                    riskLevel
+            );
+
+            SignalResult result = new SignalResult(
+                    ticker,
+                    currentPrice,
+                    sma,
+                    ema,
+                    volatility,
+                    rsi,
+                    riskLevel,
+                    currentVolume,
+                    averageVolume,
+                    score,
+                    combinedSignal,
+                    reasons
+            );
+
+            results.add(result);
+
+            String report = SignalReport.buildReport(result);
+
+            System.out.println(report);
+            System.out.println();
         }
+        results.sort((a, b) -> b.getScore() - a.getScore());
 
-        StockDataPrinter.printBarsForTicker(ticker, selectedBars);
+        System.out.println("===== WATCHLIST RANKING =====");
 
-        double[] price = stockData.getClosePrices(ticker);
-        long[] volume = stockData.getVolumes(ticker);
+        for (int i = 0; i < results.size(); i++) {
+            SignalResult result = results.get(i);
 
-        double sma = IndicatorCalculator.calculateSMA(price, 3);
-        double ema = IndicatorCalculator.calculateEMA(price, 3);
-        double volatility = IndicatorCalculator.calculateVolatility(price);
-        String riskLevel = SignalIndicator.getRiskLevel(volatility);
+            String watchStatus;
 
-        double currentPrice = price[price.length - 1];
+            if (result.getScore() >= watchScoreThreshold) {
+                watchStatus = "FLAGGED";
+            } else {
+                watchStatus = "REVIEW";
+            }
 
-        double averageVolume = StockMath.calculateAvgVolume(volume);
-        long currentVolume = volume[volume.length - 1];
+            System.out.println((i + 1) + ". "
+                    + result.getTicker()
+                    + " | "
+                    + watchStatus
+                    + " | "
+                    + result.getFinalSignal()
+                    + " | Score: "
+                    + result.getScore()
+                    + "/100");
 
-        String combinedSignal = SignalIndicator.getCombinedSignal(
-                currentPrice,
-                sma,
-                currentVolume,
-                averageVolume
-        );
-
-        String reasons = SignalIndicator.getSignalReasons(
-        currentPrice,
-        sma,
-        ema,
-        currentVolume,
-        averageVolume,
-        riskLevel
-);
-
-        String report = SignalReport.buildReport(
-                ticker,
-                currentPrice,
-                sma,
-                ema,
-                volatility,
-                riskLevel,
-                currentVolume,
-                averageVolume,
-                combinedSignal,
-                reasons
-        );
-
-        System.out.println(report);
+        }
+        System.out.println();
+        System.out.println("PSA: Educational review only. Not real financial advice.\n");
     }
 
-    
 }

@@ -1,39 +1,26 @@
 
 public class SignalReport {
 
-    public static String buildReport(
-            String ticker,
-            double currentPrice,
-            double simpleMovingAverage,
-            double exponentialMovingAverage,
-            double volatility,
-            String riskLevel,
-            long currentVolume,
-            double averageVolume,
-            String finalSignal,
-            String reasons
-    ) {
+    public static String buildReport(SignalResult result) {
         StringBuilder report = new StringBuilder();
 
         report.append("===== MARKET SIGNAL REPORT =====\n");
-        report.append("Ticker: ").append(ticker).append("\n");
-        report.append("Current Price: $").append(String.format("%.2f", currentPrice)).append("\n");
-        report.append("Simple Moving Average: $").append(String.format("%.2f", simpleMovingAverage)).append("\n");
-        report.append("Exponential Moving Average: $").append(String.format("%.2f", exponentialMovingAverage)).append("\n");
-        report.append("Volatility: ").append(String.format("%.2f", volatility)).append("%\n");
-        report.append("Risk Level: ").append(riskLevel).append("\n");
-        report.append("Current Volume: ").append(currentVolume).append("\n");
-        report.append("Average Volume: ").append(String.format("%.2f", averageVolume)).append("\n");
-        report.append("Final Signal: ").append(finalSignal).append("\n");
+        report.append("Ticker: ").append(result.getTicker()).append("\n");
+        report.append("Current Price: $").append(String.format("%.2f", result.getCurrentPrice())).append("\n");
+        report.append("Simple Moving Average: $").append(String.format("%.2f", result.getSimpleMovingAverage())).append("\n");
+        report.append("Exponential Moving Average: $").append(String.format("%.2f", result.getExponentialMovingAverage())).append("\n");
+        report.append("Volatility: ").append(String.format("%.2f", result.getVolatility())).append("%\n");
+        report.append("RSI: ").append(String.format("%.2f", result.getRsi())).append("\n");
+        report.append("Risk Level: ").append(result.getRiskLevel()).append("\n");
+        report.append("Current Volume: ").append(result.getCurrentVolume()).append("\n");
+        report.append("Average Volume: ").append(String.format("%.2f", result.getAverageVolume())).append("\n");
+        report.append("Final Signal: ").append(result.getFinalSignal()).append("\n");
+        report.append("Signal Score: ").append(result.getScore()).append("/100\n\n");
+        report.append("----- WHY THIS WAS FLAGGED -----\n");
+        report.append(result.getReasons()).append("\n");
 
-        report.append("===== WHY THIS WAS FLAGGED =====\n");
-        report.append(reasons);
-        report.append("\n");
-
-        report.append("PSA: This is an educational review only. Not real financial advice.\n");
         report.append("===============================");
 
         return report.toString();
     }
-
 }

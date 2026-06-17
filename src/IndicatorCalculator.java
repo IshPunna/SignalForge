@@ -79,4 +79,34 @@ public class IndicatorCalculator {
         return Math.sqrt(variance);
     }
 
+    public static double calculateRSI(double[] values, int period) {
+        if (values == null || period <= 0 || values.length <= period) {
+            return 0.0;
+        }
+
+        double gainSum = 0.0;
+        double lossSum = 0.0;
+
+        for (int i = values.length - period; i < values.length; i++) {
+            double change = values[i] - values[i - 1];
+
+            if (change > 0) {
+                gainSum += change;
+            } else if (change < 0) {
+                lossSum += Math.abs(change);
+            }
+        }
+
+        double averageGain = gainSum / period;
+        double averageLoss = lossSum / period;
+
+        if (averageLoss == 0) {
+            return 100.0;
+        }
+
+        double relativeStrength = averageGain / averageLoss;
+        double rsi = 100 - (100 / (1 + relativeStrength));
+
+        return rsi;
+    }
 }
