@@ -1,6 +1,6 @@
 # SignalForge
 
-SignalForge is a Java-based market signal analysis project. The goal of this project is to build a beginner-friendly trading signal scanner that analyzes stock price and volume data, calculates technical indicators, scores watchlist opportunities, and explains why a stock was flagged.
+SignalForge is a Java-based market signal analysis project. The goal is to build a beginner-friendly trading signal scanner that analyzes stock price and volume data, calculates technical indicators, scores watchlist opportunities, and explains why each stock received its result.
 
 This project is for educational and paper-trading review only. It does not provide real financial advice.
 
@@ -9,37 +9,78 @@ This project is for educational and paper-trading review only. It does not provi
 - Reads stock price and volume data from a CSV file
 - Stores daily stock data using a `PriceBar` class
 - Organizes stock data by ticker using `StockData`
-- Builds a latest price index using a `HashMap`
-- Supports a configurable watchlist of tickers
-- Skips tickers that do not have enough data to analyze
-- Calculates technical indicators:
+- Builds a latest-price index using a `HashMap`
+- Supports a configurable watchlist
+- Skips tickers that do not have enough data
+- Calculates:
   - Simple Moving Average, or SMA
   - Exponential Moving Average, or EMA
   - Percent volatility
   - RSI
-
-- Calculates average volume
+  - Average volume
+- Groups calculated values into a structured indicator object
+- Evaluates indicators using modular trading rules
 - Assigns a basic risk level based on volatility
 - Generates bullish, bearish, or neutral-style signals
 - Creates a signal score out of 100
-- Explains why a stock was flagged
-- Ranks valid watchlist results by signal score
-- Prints a clean market signal report
-- Prints a final watchlist ranking summary
+- Explains the reasoning behind each result
+- Ranks valid watchlist results by score
+- Marks results as `FLAGGED` or `REVIEW`
+- Prints formatted market signal reports
+- Includes tests for the evaluator and volume-spike boundary
 
-## Current Signal Logic
+## Modular Trading Rules
 
-SignalForge currently uses price, trend, volume, RSI, and risk level to generate a signal and score.
+SignalForge separates its scoring logic into four trading-rule classes.
 
-The basic signal logic checks:
+### Moving Average Rule
 
-- Whether the current price is above or below the moving average
-- Whether current volume is above or below average volume
-- Whether EMA is above or below SMA
-- Whether RSI suggests the stock may be oversold, neutral, or overbought
-- Whether volatility suggests low, moderate, or high risk
+- Price above SMA: 25 points
+- EMA above SMA: 20 points
 
-The scanner also uses configurable settings in `Main.java`, including:
+Maximum: 45 points
+
+### Volume Spike Rule
+
+- Current volume at least 50% above average volume: 20 points
+- Volume above average but below the spike threshold: 0 points
+- Volume at or below average: 0 points
+
+Maximum: 20 points
+
+### RSI Range Rule
+
+- RSI between 30 and 70: 20 points
+- RSI below 30: 10 points
+- RSI above 70: 0 points
+
+Maximum: 20 points
+
+### Volatility Rule
+
+- Volatility below 2%: 15 points
+- Volatility from 2% to below 5%: 8 points
+- Volatility of 5% or higher: 0 points
+
+Maximum: 15 points
+
+The highest possible signal score is 100.
+
+## Signal Classification
+
+The final bullish or bearish signal is based on the current price’s relationship to the moving average and whether the stock has a volume spike.
+
+- Price above SMA with a volume spike: Strong Bullish Signal
+- Price above SMA without a volume spike: Weak Bullish Signal
+- Price below SMA with a volume spike: Strong Bearish Signal
+- Price below SMA without a volume spike: Weak Bearish Signal
+- Price equal to SMA: Neutral Signal
+
+A volume spike occurs when current volume is at least 1.5 times the average volume.
+
+## Configurable Scan Settings
+
+The scanner currently uses configurable settings in `Main.java`:
 
 ```java
 int movingAveragePeriod = 3;
@@ -48,120 +89,161 @@ int minimumDataPoints = 3;
 int watchScoreThreshold = 60;
 ```
 
-If a stock's score is greater than or equal to the watch score threshold, it is marked as `FLAGGED` in the watchlist ranking.
+If a stock’s score is greater than or equal to the watch score threshold, it is marked as `FLAGGED`. Otherwise, it is marked as `REVIEW`.
 
 ## Project Structure
 
 ```text
-src/
-├── Main.java
-├── PriceBar.java
-├── StockCsvReader.java
-├── CsvParseException.java
-├── StockData.java
-├── LatestPriceIndex.java
-├── StockDataPrinter.java
-├── StockMath.java
-├── IndicatorCalculator.java
-├── SignalIndicator.java
-├── SignalResult.java
-└── SignalReport.java
+SignalForge/
+├── data/
+│   └── sample_stock_data.csv
+├── src/
+│   ├── Main.java
+│   ├── PriceBar.java
+│   ├── StockCsvReader.java
+│   ├── CsvParseException.java
+│   ├── StockData.java
+│   ├── LatestPriceIndex.java
+│   ├── StockDataPrinter.java
+│   ├── StockMath.java
+│   ├── IndicatorCalculator.java
+│   ├── CalculatedMarketIndicators.java
+│   ├── TradingRule.java
+│   ├── MovingAverageRule.java
+│   ├── VolumeSpikeRule.java
+│   ├── RsiRangeRule.java
+│   ├── VolatilityRule.java
+│   ├── MarketSignalEvaluator.java
+│   ├── SignalIndicator.java
+│   ├── SignalResult.java
+│   └── SignalReport.java
+├── tests/
+│   └── MarketSignalEvaluatorTest.java
+└── README.md
 ```
 
-## File Responsibilities
+## Main Class Responsibilities
 
-`Main.java`
-Runs the program, loads the CSV data, defines scan settings, loops through the watchlist, creates signal results, and prints reports/rankings.
+`Main.java`  
+Runs the program, defines the scan settings, loads the CSV data, loops through the watchlist, calculates indicators, creates results, and prints reports and rankings.
 
-`PriceBar.java`
-Represents one day of stock data, including ticker, date, open price, high price, low price, close price, and volume.
+`PriceBar.java`  
+Represents one day of stock data, including the ticker, date, open price, high price, low price, close price, and volume.
 
-`StockCsvReader.java`
-Reads stock data from a CSV file and converts each row into a `PriceBar` object.
+`StockCsvReader.java`  
+Reads the CSV file and converts each valid row into a `PriceBar` object.
 
-`CsvParseException.java`
-Custom exception class for CSV parsing errors.
+`CsvParseException.java`  
+Provides a custom exception for CSV parsing errors.
 
-`StockData.java`
-Stores a list of `PriceBar` objects and provides methods for filtering by ticker, getting close prices, getting volumes, and building the latest price index.
+`StockData.java`  
+Stores the price bars and provides methods for filtering by ticker, retrieving close prices and volumes, and building the latest-price index.
 
-`LatestPriceIndex.java`
+`LatestPriceIndex.java`  
 Uses a `HashMap` to store and retrieve the latest close price for each ticker.
 
-`StockDataPrinter.java`
-Prints loaded stock data, ticker-specific data, and the latest price index.
+`StockDataPrinter.java`  
+Prints loaded stock data, ticker-specific data, and the latest-price index.
 
-`StockMath.java`
-Contains general stock math helper methods, such as percent change and average calculations.
+`StockMath.java`  
+Contains general stock-math helper methods, including percent-change and average calculations.
 
-`IndicatorCalculator.java`
-Calculates technical indicators such as SMA, EMA, volatility, RSI, and average volume.
+`IndicatorCalculator.java`  
+Calculates SMA, EMA, volatility, RSI, and average volume.
 
-`SignalIndicator.java`
-Handles signal logic, risk level logic, signal scoring, and reason generation.
+`CalculatedMarketIndicators.java`  
+Groups all calculated indicator values into one object that can be passed to each trading rule.
 
-`SignalResult.java`
-Stores the structured result for one ticker, including indicators, score, signal, risk level, and reasons.
+`TradingRule.java`  
+Defines the methods that every modular trading rule must implement.
 
-`SignalReport.java`
-Builds a clean formatted report from a `SignalResult`.
+`MovingAverageRule.java`  
+Evaluates price, SMA, and EMA trend conditions.
 
-## Example Output
+`VolumeSpikeRule.java`  
+Determines whether the current volume meets the 50% volume-spike threshold.
+
+`RsiRangeRule.java`  
+Evaluates whether RSI is oversold, neutral, or overbought.
+
+`VolatilityRule.java`  
+Evaluates volatility and assigns points based on risk.
+
+`MarketSignalEvaluator.java`  
+Runs every trading rule and combines their scores and explanations.
+
+`SignalIndicator.java`  
+Classifies the final signal and assigns the volatility-based risk level.
+
+`SignalResult.java`  
+Stores the structured result for one ticker.
+
+`SignalReport.java`  
+Builds a formatted market signal report from a `SignalResult`.
+
+`MarketSignalEvaluatorTest.java`  
+Tests a 100-point bullish result, a bearish result, and the exact volume-spike boundary.
+
+## Sample Watchlist Ranking
 
 ```text
-===== LATEST PRICE INDEX =====
-MSFT -> $203.0
-AAPL -> $108.0
-
-===== SCAN SETTINGS =====
-Moving Average Period: 3
-RSI Period: 2
-Minimum Data Points: 3
-Watch Score Threshold: 60
-=========================
-
-===== MARKET SIGNAL REPORT =====
-Ticker: AAPL
-Current Price: $108.00
-Simple Moving Average: $106.33
-Exponential Moving Average: $107.04
-Volatility: 0.98%
-RSI: 100.00
-Risk Level: Low
-Current Volume: 900000
-Average Volume: 1033333.33
-Final Signal: Weak Bullish Signal
-Signal Score: 60/100
-
------ WHY THIS WAS FLAGGED -----
-- Price is above SMA, suggesting an upward trend.
-- EMA is above SMA, suggesting recent momentum is improving.
-- RSI is above 70, suggesting the stock may be overbought.
-- Volume is below average, so the signal is weaker.
-- Risk level is Low.
-
-===============================
-
-===== SKIPPED TICKER =====
-Ticker: MSFT
-Reason: Needs at least 3 data points.
-==========================
-
 ===== WATCHLIST RANKING =====
 1. AAPL | FLAGGED | Weak Bullish Signal | Score: 60/100
+2. MSFT | REVIEW | Strong Bearish Signal | Score: 45/100
 
 PSA: Educational review only. Not real financial advice.
 ```
 
+This sample tests two different market conditions:
+
+- AAPL has an upward price trend but lacks a volume spike.
+- MSFT has a downward price trend with a major volume spike.
+
+## How to Compile and Run
+
+From the main `SignalForge` folder, compile the source files:
+
+```powershell
+javac -d output src/*.java
+```
+
+Run the program:
+
+```powershell
+java -cp output Main
+```
+
+## How to Run the Tests
+
+Compile both the source files and test files:
+
+```powershell
+javac -d output src/*.java tests/*.java
+```
+
+Run the evaluator tests:
+
+```powershell
+java -cp output MarketSignalEvaluatorTest
+```
+
+Expected result:
+
+```text
+Perfect bullish score passed.
+Bearish score passed.
+Exact volume-spike boundary passed.
+All MarketSignalEvaluator tests passed!
+```
+
 ## Next Steps
 
-- Add more sample data for multiple tickers
-- Make the watchlist user-configurable through command-line input
-- Let users choose indicator periods and score thresholds at runtime
-- Improve the scoring system with clearer rule weights
-- Add a more flexible rule engine
+- Make the watchlist configurable through command-line input
+- Let users choose indicator periods and thresholds at runtime
+- Move more signal classification logic into modular rules
+- Add additional evaluator and indicator tests
 - Add paper-trading journal support
 - Add backtesting logic
-- Add AI-generated explanations based only on the app’s calculated data
+- Add AI-generated explanations based only on calculated data
 - Build a stronger command-line interface
-- Eventually add a simple dashboard or web app interface
+- Eventually create a simple dashboard or web interface

@@ -1,4 +1,3 @@
-
 /**
  * IndicatorCalculator = calculations for market indicators
  */

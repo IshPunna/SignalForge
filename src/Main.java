@@ -31,6 +31,8 @@ public class Main {
 
         ArrayList<SignalResult> results = new ArrayList<>();
 
+        MarketSignalEvaluator marketSignalEvaluator = new MarketSignalEvaluator();
+
         for (String ticker : watchlist) {
             ArrayList<PriceBar> selectedBars = stockData.getBarsForTicker(ticker);
 
@@ -73,25 +75,26 @@ public class Main {
                     averageVolume
             );
 
-            int score = SignalIndicator.getSignalScore(
-                    currentPrice,
-                    sma,
-                    ema,
-                    rsi,
-                    currentVolume,
-                    averageVolume,
-                    riskLevel
-            );
+            CalculatedMarketIndicators calculatedIndicators
+                    = new CalculatedMarketIndicators(
+                            currentPrice,
+                            sma,
+                            ema,
+                            volatility,
+                            rsi,
+                            currentVolume,
+                            averageVolume
+                    );
 
-            String reasons = SignalIndicator.getSignalReasons(
-                    currentPrice,
-                    sma,
-                    ema,
-                    rsi,
-                    currentVolume,
-                    averageVolume,
-                    riskLevel
-            );
+            int score
+                    = marketSignalEvaluator.calculateTotalScore(
+                            calculatedIndicators
+                    );
+
+            String reasons
+                    = marketSignalEvaluator.buildAllReasons(
+                            calculatedIndicators
+                    );
 
             SignalResult result = new SignalResult(
                     ticker,
