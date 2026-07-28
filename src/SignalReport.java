@@ -19,7 +19,7 @@ public class SignalReport {
         report.append("----- WHY THIS WAS FLAGGED -----\n");
         report.append(result.getReasons()).append("\n");
 
-        report.append("===============================");
+        report.append("==============x=================");
 
         return report.toString();
     }

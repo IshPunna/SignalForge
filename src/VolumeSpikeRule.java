@@ -23,7 +23,7 @@ public class VolumeSpikeRule implements TradingRule {
         double spikeThreshold =
                 indicators.getAverageVolume() * SPIKE_MULTIPLIER;
 
-        if (indicators.getCurrentVolume() > spikeThreshold) {
+        if (indicators.getCurrentVolume() >= spikeThreshold) {
             return "- Volume is at least 50% above average, indicating a volume spike.\n";
         } 
         else if (indicators.getCurrentVolume()

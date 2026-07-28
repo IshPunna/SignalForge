@@ -7,6 +7,7 @@ This project is for educational and paper-trading review only. It does not provi
 ## Current Features
 
 - Reads stock price and volume data from a CSV file
+- Validates CSV data before processing it
 - Stores daily stock data using a `PriceBar` class
 - Organizes stock data by ticker using `StockData`
 - Builds a latest-price index using a `HashMap`
@@ -24,10 +25,16 @@ This project is for educational and paper-trading review only. It does not provi
 - Generates bullish, bearish, or neutral-style signals
 - Creates a signal score out of 100
 - Explains the reasoning behind each result
-- Ranks valid watchlist results by score
+- Scans multiple watchlist tickers using a dedicated `SignalScanner`
+- Stores completed scans in a ranked `ScanReport`
+- Ranks valid watchlist results from highest score to lowest score
 - Marks results as `FLAGGED` or `REVIEW`
+- Separates report formatting from scanning logic
 - Prints formatted market signal reports
-- Includes tests for the evaluator and volume-spike boundary
+- Queues threshold-qualified results as alerts
+- Processes alerts in first-in, first-out order
+- Prevents the alert queue from exceeding its configured capacity
+- Includes tests for scoring, scanning, skipped tickers, volume boundaries, queue capacity, and FIFO behavior
 
 ## Modular Trading Rules
 
@@ -89,7 +96,7 @@ int minimumDataPoints = 3;
 int watchScoreThreshold = 60;
 ```
 
-If a stock’s score is greater than or equal to the watch score threshold, it is marked as `FLAGGED`. Otherwise, it is marked as `REVIEW`.
+If a stock’s score is greater than or equal to the watch score threshold, it is marked as `FLAGGED` and added to the alert queue. Otherwise, it is marked as `REVIEW`.
 
 ## Project Structure
 
@@ -116,22 +123,29 @@ SignalForge/
 │   ├── MarketSignalEvaluator.java
 │   ├── SignalIndicator.java
 │   ├── SignalResult.java
-│   └── SignalReport.java
+│   ├── SignalReport.java
+│   ├── SignalScanner.java
+│   ├── ScanReport.java
+│   ├── ScanReportPrinter.java
+│   └── AlertQueue.java
 ├── tests/
-│   └── MarketSignalEvaluatorTest.java
+│   ├── MarketSignalEvaluatorTest.java
+│   └── SignalForgeTests.java
+├── .vscode/
+│   └── settings.json
 └── README.md
 ```
 
 ## Main Class Responsibilities
 
 `Main.java`  
-Runs the program, defines the scan settings, loads the CSV data, loops through the watchlist, calculates indicators, creates results, and prints reports and rankings.
+Defines the watchlist and scan settings, loads the CSV data, starts the scanner, prints the completed report, creates alerts for qualifying stocks, and displays the educational disclaimer.
 
 `PriceBar.java`  
 Represents one day of stock data, including the ticker, date, open price, high price, low price, close price, and volume.
 
 `StockCsvReader.java`  
-Reads the CSV file and converts each valid row into a `PriceBar` object.
+Reads the CSV file, validates its contents, and converts each valid row into a `PriceBar` object.
 
 `CsvParseException.java`  
 Provides a custom exception for CSV parsing errors.
@@ -181,8 +195,23 @@ Stores the structured result for one ticker.
 `SignalReport.java`  
 Builds a formatted market signal report from a `SignalResult`.
 
+`SignalScanner.java`  
+Scans each watchlist ticker, verifies that enough data exists, calculates its indicators, evaluates its score, and creates a structured result.
+
+`ScanReport.java`  
+Stores completed results and skipped tickers. It automatically ranks valid results from highest score to lowest score.
+
+`ScanReportPrinter.java`  
+Prints the scan settings, individual market reports, skipped tickers, and final watchlist ranking.
+
+`AlertQueue.java`  
+Stores flagged results in a capacity-limited, first-in-first-out queue.
+
 `MarketSignalEvaluatorTest.java`  
-Tests a 100-point bullish result, a bearish result, and the exact volume-spike boundary.
+Tests evaluator scoring behavior and the exact volume-spike boundary.
+
+`SignalForgeTests.java`  
+Runs 11 checks covering bullish scoring, the exact volume-spike boundary, scanning, skipped tickers, queue capacity, and FIFO behavior.
 
 ## Sample Watchlist Ranking
 
@@ -190,8 +219,6 @@ Tests a 100-point bullish result, a bearish result, and the exact volume-spike b
 ===== WATCHLIST RANKING =====
 1. AAPL | FLAGGED | Weak Bullish Signal | Score: 60/100
 2. MSFT | REVIEW | Strong Bearish Signal | Score: 45/100
-
-PSA: Educational review only. Not real financial advice.
 ```
 
 This sample tests two different market conditions:
@@ -199,12 +226,28 @@ This sample tests two different market conditions:
 - AAPL has an upward price trend but lacks a volume spike.
 - MSFT has a downward price trend with a major volume spike.
 
+## Sample Flagged Alerts
+
+```text
+===== FLAGGED ALERTS =====
+AAPL | Weak Bullish Signal | Score: 60/100
+==========================
+```
+
+Only results meeting or exceeding the configured watch score threshold are added to the alert queue.
+
 ## How to Compile and Run
 
-From the main `SignalForge` folder, compile the source files:
+From the main `SignalForge` folder, create the output folder if it does not already exist:
 
 ```powershell
-javac -d output src/*.java
+mkdir output
+```
+
+Compile the source files:
+
+```powershell
+javac -d output (Get-ChildItem .\src\*.java).FullName
 ```
 
 Run the program:
@@ -215,35 +258,41 @@ java -cp output Main
 
 ## How to Run the Tests
 
-Compile both the source files and test files:
+Compile the source files and the main SignalForge test suite:
 
 ```powershell
-javac -d output src/*.java tests/*.java
+javac -d output (Get-ChildItem .\src\*.java).FullName .\tests\SignalForgeTests.java
 ```
 
-Run the evaluator tests:
+Run the tests:
 
 ```powershell
-java -cp output MarketSignalEvaluatorTest
+java -cp output SignalForgeTests
 ```
 
 Expected result:
 
 ```text
-Perfect bullish score passed.
-Bearish score passed.
-Exact volume-spike boundary passed.
-All MarketSignalEvaluator tests passed!
+All 11 SignalForge tests passed.
 ```
+
+The tests cover:
+
+- A perfect bullish evaluation
+- The exact 1.5-times volume-spike boundary
+- Watchlist scanning
+- Insufficient-data handling
+- Alert queue capacity
+- First-in, first-out alert removal
 
 ## Next Steps
 
-- Make the watchlist configurable through command-line input
+- Accept watchlist tickers through command-line input
 - Let users choose indicator periods and thresholds at runtime
-- Move more signal classification logic into modular rules
-- Add additional evaluator and indicator tests
+- Add more indicator and edge-case tests
+- Add historical backtesting
 - Add paper-trading journal support
-- Add backtesting logic
-- Add AI-generated explanations based only on calculated data
+- Improve CSV error reporting
 - Build a stronger command-line interface
-- Eventually create a simple dashboard or web interface
+- Eventually create a dashboard or web interface
+- Add AI-generated explanations based only on calculated data
